@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>TEAMJACK | Consultoria 3D & Treinador Jackson Freitas</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Configuração de Tema Dark Fitness / Neon Purple -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            teamBg: '#080511',
+            teamCard: '#130c24',
+            teamCardLight: '#1d1336',
+            teamPurple: '#8b5cf6',
+            teamPurpleHover: '#7c3aed',
+            teamNeon: '#a855f7',
+            teamGlow: '#c084fc',
+            teamRed: '#ef4444',
+            teamGreen: '#22c55e',
+            teamBorder: 'rgba(139, 92, 246, 0.3)'
+          },
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+          },
+          boxShadow: {
+            'glow-purple': '0 0 35px rgba(139, 92, 246, 0.5)',
+            'glow-neon': '0 0 45px rgba(168, 85, 247, 0.6)',
+            'card-3d': '0 20px 40px -15px rgba(0,0,0,0.8), 0 0 20px rgba(139, 92, 246, 0.2)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Three.js (Cena 3D) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <style>
+    html { scroll-behavior: smooth; font-family: 'Plus Jakarta Sans', sans-serif; }
+    body { overflow-x: hidden; background-color: #080511; color: #f1f5f9; }
+    
+    /* Three.js Canvas Background Fixo */
+    #canvas-3d {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Efeito de Card 3D Tilt */
+    .tilt-card {
+      transform-style: preserve-3d;
+      perspective: 1000px;
+      transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+    }
+    .tilt-card-content {
+      transform: translateZ(30px);
+    }
+    .tilt-card-badge {
+      transform: translateZ(50px);
+    }
+
+    /* Animações de Scroll Reveal */
+    .motion-ready [data-reveal] { 
+      opacity: 0; 
+      transform: translateY(40px) scale(0.96); 
+      transition: opacity 0.75s cubic-bezier(.2,.7,.2,1), transform 0.75s cubic-bezier(.2,.7,.2,1); 
+      transition-delay: var(--reveal-delay, 0ms); 
+    }
+    .motion-ready [data-reveal].is-visible { opacity: 1; transform: none; }
+    
+    /* Efeito de Brilho Dinâmico nos Botões CTA */
+    .cta-motion { 
+      position: relative; 
+      isolation: isolate; 
+      overflow: hidden; 
+      transition: transform .25s ease, box-shadow .25s ease, filter .25s ease; 
+    }
+    .cta-motion::after { 
+      content: ""; 
+      position: absolute; 
+      inset: -80% -35%; 
+      z-index: -1; 
+      background: linear-gradient(110deg, transparent 35%, rgba(255,255,255,.4) 50%, transparent 65%); 
+      transform: translateX(-100%) rotate(12deg); 
+      transition: transform .7s cubic-bezier(0.4, 0, 0.2, 1); 
+    }
+    .cta-motion:hover { transform: translateY(-3px) scale(1.02); filter: brightness(1.12); }
+    .cta-motion:hover::after { transform: translateX(100%) rotate(12deg); }
+
+    /* Carrossel Touch */
+    .results-slide { display: none; animation: resultsFade .45s ease both; }
+    .results-slide.is-active { display: block; }
+    @keyframes resultsFade { from { opacity: .1; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+    
+    .results-arrow { 
+      position: absolute; 
+      top: 50%; 
+      transform: translateY(-50%);
+      z-index: 25; 
+      width: 48px; 
+      height: 48px; 
+      border-radius: 999px; 
+      color: #fff; 
+      background: rgba(139, 92, 246, 0.85); 
+      border: 1px solid rgba(196, 181, 253, 0.8); 
+      box-shadow: 0 0 25px rgba(139, 92, 246, 0.5); 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      cursor: pointer; 
+      transition: all .2s ease;
+    }
+    .results-arrow:hover { transform: translateY(-50%) scale(1.15); background: #7c3aed; }
+    .results-dot { width: 10px; height: 10px; border-radius: 999px; background: #4b4458; transition: all .3s ease; cursor: pointer; }
+    .results-dot.is-active { width: 34px; background: #a855f7; box-shadow: 0 0 16px rgba(168, 85, 247, .8); }
+
+    /* Glassmorphism */
+    .glass-panel {
+      background: rgba(19, 12, 36, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(139, 92, 246, 0.25);
+    }
+    .glass-panel-light {
+      background: rgba(30, 20, 54, 0.65);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(168, 85, 247, 0.3);
+    }
+
+    /* Pulso 3D Botão WhatsApp */
+    @keyframes pulse3d {
+      0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7); transform: scale(1); }
+      70% { box-shadow: 0 0 0 20px rgba(37, 211, 102, 0); transform: scale(1.06); }
+      100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); transform: scale(1); }
+    }
+    .whatsapp-3d-pulse {
+      animation: pulse3d 2s infinite;
+    }
+  </style>
+</head>
+<body class="selection:bg-teamPurple selection:text-white leading-relaxed">
+
+  <!-- Canvas 3D de Fundo com Three.js -->
+  <canvas id="canvas-3d"></canvas>
+
+  <!-- ==========================================
+       BARRA SUPERIOR DE URGÊNCIA / VAGAS LIMITADAS
+  =========================================== -->
+  <div class="relative z-50 bg-gradient-to-r from-purple-900 via-teamPurple to-indigo-900 text-white text-xs sm:text-sm py-2 px-4 text-center font-bold tracking-wide flex items-center justify-center gap-2 shadow-lg">
+    <span class="inline-block w-2.5 h-2.5 rounded-full bg-red-400 animate-ping"></span>
+    <span>VAGAS LIMITADAS PARA ESTA SEMANA:</span>
+    <span id="vagas-counter" class="bg-red-600 text-white px-2 py-0.5 rounded text-xs font-black">APENAS 4 VAGAS</span>
+    <span class="hidden md:inline">| Acompanhamento VIP com Coach Jackson Freitas</span>
+  </div>
+
+  <!-- ==========================================
+       1. CABEÇALHO / NAVBAR (FIXO GLASSMORPHISM)
+  =========================================== -->
+  <header id="main-header" class="fixed top-8 left-0 w-full z-40 transition-all duration-300">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="glass-panel rounded-2xl px-4 sm:px-6 h-[72px] flex items-center justify-between shadow-2xl">
+        
+        <!-- LOGO -->
+        <a href="#" class="flex items-center gap-3 group">
+          <div class="w-11 h-11 rounded-xl bg-teamCard border border-teamBorder overflow-hidden flex items-center justify-center shadow-glow-neon group-hover:scale-105 transition-transform">
+            <img src="logo.png" alt="Logo TeamJack Crocodilo" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/100x100/8b5cf6/ffffff?text=JACK'">
+          </div>
+          <div>
+            <span class="text-lg sm:text-xl font-black tracking-wider text-white">TEAM<span class="text-teamNeon">JACK</span></span>
+            <span class="block text-[9px] text-purple-300 uppercase tracking-widest font-extrabold">Jackson Freitas</span>
+          </div>
+        </a>
+
+        <!-- Menu Desktop -->
+        <nav class="hidden md:flex items-center gap-6 text-xs font-bold text-slate-300 uppercase tracking-wider">
+          <a href="#diferenciais" class="hover:text-teamNeon transition-colors">Diferenciais</a>
+          <a href="#entregaveis" class="hover:text-teamNeon transition-colors">O que inclui</a>
+          <a href="#calculadora" class="hover:text-teamNeon transition-colors">Simulador</a>
+          <a href="#resultados" class="hover:text-teamNeon transition-colors">Resultados</a>
+          <a href="#planos" class="hover:text-teamNeon transition-colors">Planos</a>
+          <a href="#faq" class="hover:text-teamNeon transition-colors">Dúvidas</a>
+        </nav>
+
+        <!-- CTA Header -->
+        <div class="hidden md:flex items-center gap-4">
+          <a href="#planos" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-teamPurple to-purple-600 text-white font-black text-xs hover:shadow-glow-purple transition-all cta-motion flex items-center gap-2">
+            <span>ENTRAR NO TIME</span>
+            <i data-lucide="zap" class="w-4 h-4 fill-white"></i>
+          </a>
+        </div>
+
+        <!-- Botão Menu Mobile -->
+        <button id="mobile-menu-btn" class="md:hidden p-2 text-slate-200 hover:text-white rounded-lg focus:outline-none" aria-label="Abrir Menu">
+          <i data-lucide="menu" class="w-7 h-7"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Dropdown Menu Mobile -->
+    <div id="mobile-menu" class="hidden md:hidden max-w-7xl mx-auto px-4 mt-2">
+      <div class="glass-panel rounded-2xl p-6 space-y-4 shadow-2xl border border-teamBorder">
+        <a href="#diferenciais" class="mobile-link block text-slate-200 hover:text-teamNeon font-bold text-sm">Diferenciais</a>
+        <a href="#entregaveis" class="mobile-link block text-slate-200 hover:text-teamNeon font-bold text-sm">O que inclui</a>
+        <a href="#calculadora" class="mobile-link block text-slate-200 hover:text-teamNeon font-bold text-sm">Simulador de Resultado</a>
+        <a href="#resultados" class="mobile-link block text-slate-200 hover:text-teamNeon font-bold text-sm">Resultados Reais</a>
+        <a href="#planos" class="mobile-link block text-slate-200 hover:text-teamNeon font-bold text-sm">Planos & Preços</a>
+        <a href="#faq" class="mobile-link block text-slate-200 hover:text-teamNeon font-bold text-sm">Dúvidas Frequentes</a>
+        <a href="#planos" class="mobile-link block text-center px-4 py-3.5 rounded-xl bg-gradient-to-r from-teamPurple to-purple-600 text-white font-black text-sm shadow-glow-neon">
+          GARANTIR MINHA VAGA AGORA
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==========================================
+       2. HERO SECTION 3D COM FOTO EM DESTAQUE E TITULO CONVERSOR
+  =========================================== -->
+  <section class="relative min-h-screen flex flex-col items-center justify-center pt-36 pb-16 overflow-hidden z-10">
+    
+    <!-- Camada de Fundo Gradiente e Iluminação -->
+    <div class="absolute inset-0 pointer-events-none">
+      <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-teamPurple/20 rounded-full blur-[140px]"></div>
+      <div class="absolute bottom-10 left-1/2 -translate-x-1/2 w-full h-48 bg-gradient-to-t from-teamBg to-transparent"></div>
+    </div>
+
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8 relative z-20">
+      
+      <!-- Badge de Impacto -->
+      <div class="inline-flex items-center gap-2 px-5 py-2 rounded-full glass-panel-light text-purple-300 text-xs font-black uppercase tracking-widest shadow-glow-purple" data-reveal="up">
+        <span class="w-2.5 h-2.5 rounded-full bg-teamNeon animate-ping"></span>
+        <span>Consultoria Fitness Nº 1 em Resultados</span>
+      </div>
+
+      <!-- Título de Alta Conversão -->
+      <h1 class="text-3xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white leading-[1.1] drop-shadow-[0_10px_25px_rgba(0,0,0,0.9)]" data-reveal="up">
+        CONQUISTE O CORPO DOS SONHOS <br class="hidden sm:inline">
+        <span class="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-teamNeon to-purple-200">SEM PERDER TEMPO</span>
+      </h1>
+
+      <!-- Subtítulo -->
+      <p class="text-slate-300 text-base sm:text-xl max-w-3xl mx-auto font-medium leading-relaxed drop-shadow-md" data-reveal="up">
+        Sem dietas malucas, sem prejudicar sua saúde e sem deixar de comer o que gosta. Treino e nutrição 100% individualizados com acompanhamento direto pelo WhatsApp.
+      </p>
+
+      <!-- Botões CTA Hero -->
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4" data-reveal="up">
+        <a href="#planos" class="w-full sm:w-auto px-9 py-4 rounded-2xl bg-gradient-to-r from-teamPurple via-purple-600 to-indigo-600 text-white font-black text-base shadow-glow-neon flex items-center justify-center gap-3 cta-motion min-h-[52px]">
+          <i data-lucide="flame" class="w-6 h-6 fill-white"></i>
+          <span>QUERO ENTRAR NO TEAMJACK</span>
+        </a>
+        <a href="#calculadora" class="w-full sm:w-auto px-8 py-4 rounded-2xl glass-panel text-slate-200 hover:text-white hover:border-teamNeon font-bold text-base transition-all flex items-center justify-center gap-2 min-h-[52px]">
+          <i data-lucide="calculator" class="w-5 h-5 text-teamNeon"></i>
+          <span>SIMULAR MEUS RESULTADOS</span>
+        </a>
+      </div>
+
+      <!-- Foto Destaque do Treinador / Imagem de Apoio 3D -->
+      <div class="relative pt-8 max-w-3xl mx-auto" data-reveal="up">
+        <div class="tilt-card relative group rounded-3xl p-2 bg-gradient-to-b from-teamPurple/40 via-transparent to-teamPurple/10 border border-teamBorder shadow-card-3d overflow-hidden">
+          <div class="relative rounded-2xl overflow-hidden bg-teamCard/80 aspect-[16/9] sm:aspect-[21/9]">
+            <img src="Equipe Unida, Disciplina e Resultados.png" alt="Equipe Teamjack" class="w-full h-full object-cover filter brightness-[0.45] contrast-125 group-hover:scale-105 transition-transform duration-700" onerror="this.src='https://placehold.co/1200x600/130c24/8b5cf6?text=TEAMJACK+FITNESS'">
+            <div class="absolute inset-0 bg-gradient-to-t from-teamBg via-transparent to-transparent"></div>
+            
+            <!-- Imagem Sobreposta Jackson -->
+            <div class="absolute inset-0 flex items-end justify-center pointer-events-none">
+              <img src="jackson-frente.png" alt="Jackson Freitas" class="h-[110%] w-auto object-contain drop-shadow-[0_10px_35px_rgba(139,92,246,0.8)]" onerror="this.style.display='none'">
+            </div>
+
+            <!-- Overlay Badge 3D -->
+            <div class="absolute bottom-4 left-4 right-4 sm:left-6 sm:right-6 flex justify-between items-center z-20 pointer-events-auto">
+              <div class="glass-panel px-4 py-2 rounded-xl text-left border border-teamBorder">
+                <span class="text-xs font-black text-white block">+5.000 ALUNOS</span>
+                <span class="text-[10px] text-purple-300 font-semibold">Transformados no Brasil e Exterior</span>
+              </div>
+              <div class="glass-panel px-4 py-2 rounded-xl text-right border border-teamBorder">
+                <span class="text-xs font-black text-teamNeon block">100% PERSONALIZADO</span>
+                <span class="text-[10px] text-purple-300 font-semibold">Sem treinos genéricos</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Cards Stats Rápidos em Destaque 3D -->
+    <div class="relative z-20 max-w-5xl mx-auto px-4 w-full mt-12">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="glass-panel p-5 rounded-2xl text-center tilt-card border border-teamBorder hover:border-teamNeon">
+          <div class="text-3xl font-black text-white mb-1">+5.000</div>
+          <div class="text-xs text-purple-200 font-medium">Alunos Atendidos</div>
+        </div>
+        <div class="glass-panel p-5 rounded-2xl text-center tilt-card border border-teamBorder hover:border-teamNeon">
+          <div class="text-3xl font-black text-teamNeon mb-1">100%</div>
+          <div class="text-xs text-purple-200 font-medium">Foco no Seu Objetivo</div>
+        </div>
+        <div class="glass-panel p-5 rounded-2xl text-center tilt-card border border-teamBorder hover:border-teamNeon">
+          <div class="text-3xl font-black text-white mb-1">7 Dias</div>
+          <div class="text-xs text-purple-200 font-medium">Suporte no Whats/Semana</div>
+        </div>
+        <div class="glass-panel p-5 rounded-2xl text-center tilt-card border border-teamBorder hover:border-teamNeon">
+          <div class="text-3xl font-black text-teamGlow mb-1">100%</div>
+          <div class="text-xs text-purple-200 font-medium">Garantia Incondicional</div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ==========================================
+       3. CALCULADORA INTERATIVA DE TREINO (CONVERSÃO)
+  =========================================== -->
+  <section id="calculadora" class="py-20 relative z-20">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      
+      <div class="glass-panel p-6 sm:p-10 rounded-3xl border border-teamNeon shadow-glow-neon relative overflow-hidden" data-reveal="up">
+        
+        <div class="absolute top-0 right-0 p-8 pointer-events-none opacity-20">
+          <i data-lucide="calculator" class="w-48 h-48 text-teamPurple"></i>
+        </div>
+
+        <div class="text-center max-w-2xl mx-auto mb-8 relative z-10">
+          <span class="text-teamNeon text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full bg-purple-950/60 border border-purple-500/40 inline-block mb-3">
+            SIMULADOR EXCLUSIVO TEAMJACK
+          </span>
+          <h2 class="text-2xl sm:text-4xl font-black text-white">Calcule o Tempo para Atingir sua Meta</h2>
+          <p class="text-slate-300 text-xs sm:text-sm mt-2">Descubra em quantas semanas seu físico mudará com o método individualizado.</p>
+        </div>
+
+        <!-- Formulário Interativo -->
+        <div class="space-y-6 relative z-10">
+          
+          <!-- Seleção de Objetivo -->
+          <div>
+            <label class="block text-xs font-extrabold text-purple-200 uppercase tracking-wider mb-3">1. Qual é o seu objetivo principal?</label>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" id="calc-goal-options">
+              <button type="button" data-value="hipertrofia" class="calc-btn active p-4 rounded-xl glass-panel text-center font-bold text-sm text-white border-teamNeon bg-teamPurple/40 flex items-center justify-center gap-2">
+                <i data-lucide="biceps-flexed" class="w-5 h-5 text-teamNeon"></i>
+                <span>Ganhar Massa (Hipertrofia)</span>
+              </button>
+              <button type="button" data-value="emagrecimento" class="calc-btn p-4 rounded-xl glass-panel text-center font-bold text-sm text-slate-300 border-teamBorder hover:border-teamPurple flex items-center justify-center gap-2">
+                <i data-lucide="flame" class="w-5 h-5 text-teamRed"></i>
+                <span>Perder Gordura (Secar)</span>
+              </button>
+              <button type="button" data-value="definicao" class="calc-btn p-4 rounded-xl glass-panel text-center font-bold text-sm text-slate-300 border-teamBorder hover:border-teamPurple flex items-center justify-center gap-2">
+                <i data-lucide="zap" class="w-5 h-5 text-yellow-400"></i>
+                <span>Definição Muscular</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Seleção de Dias -->
+          <div>
+            <div class="flex justify-between items-center mb-2">
+              <label class="text-xs font-extrabold text-purple-200 uppercase tracking-wider">2. Quantos dias por semana você pode treinar?</label>
+              <span id="days-count-label" class="text-teamNeon font-black text-sm">4 dias/semana</span>
+            </div>
+            <input type="range" id="days-range" min="3" max="6" value="4" step="1" class="w-full accent-purple-500 bg-purple-950 h-2 rounded-lg cursor-pointer">
+            <div class="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
+              <span>3 dias (Ideal p/ rotina corrida)</span>
+              <span>4-5 dias (Recomendado)</span>
+              <span>6 dias (Atleta)</span>
+            </div>
+          </div>
+
+          <!-- Resultado Estimado da Calculadora -->
+          <div class="bg-teamCard/90 border border-teamNeon/50 p-6 rounded-2xl text-center space-y-3">
+            <div class="text-xs font-bold text-purple-300 uppercase tracking-widest">Estimativa de Resultado Visível:</div>
+            <div id="calc-result-text" class="text-2xl sm:text-3xl font-black text-white">
+              Primeiras mudanças em <span class="text-teamNeon">3 a 4 semanas</span>!
+            </div>
+            <p id="calc-result-sub" class="text-slate-300 text-xs max-w-lg mx-auto">
+              Com o acompanhamento do Jackson Freitas, você terá um plano exato ajustado para seus 4 dias disponíveis sem passar fome.
+            </p>
+          </div>
+
+          <!-- CTA Direto WhatsApp com Parâmetros -->
+          <a id="calc-whatsapp-btn" href="https://wa.me/554888132994?text=Olá%20Coach!%20Simulei%20no%20site:%20Quero%20Ganhar%20Massa%20treinando%204%20dias%20por%20semana.%20Como%20funciona?" target="_blank" class="w-full py-4 rounded-2xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-black text-sm sm:text-base text-center flex items-center justify-center gap-3 shadow-glow-neon cta-motion">
+            <i data-lucide="message-square" class="w-6 h-6 fill-white"></i>
+            <span>INICIAR CONSULTORIA COM ESTE OBJETIVO</span>
+          </a>
+
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==========================================
+       4. DIFERENCIAIS (COMPARATIVO 3D)
+  =========================================== -->
+  <section id="diferenciais" class="py-20 relative z-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-16" data-reveal="up">
+        <span class="text-teamNeon text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full bg-purple-950/60 border border-purple-500/40">POR QUE SOMOS DIFERENTES</span>
+        <h2 class="text-3xl sm:text-5xl font-black text-white mt-3">Esqueça as consultorias genéricas da internet</h2>
+        <p class="text-slate-300 mt-3 text-sm sm:text-base">Veja a diferença entre jogar seu dinheiro fora e ter um acompanhamento profissional de verdade.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        
+        <!-- CARD OUTRAS CONSULTORIAS -->
+        <div class="glass-panel p-8 rounded-3xl border border-red-500/30 hover:border-red-500/60 transition-all tilt-card" data-reveal="up">
+          <div class="tilt-card-content space-y-6">
+            <div class="flex items-center gap-3 text-teamRed">
+              <div class="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center">
+                <i data-lucide="x-circle" class="w-7 h-7"></i>
+              </div>
+              <div>
+                <h3 class="text-xl font-black text-white">Outras Consultorias</h3>
+                <span class="text-xs text-red-400 font-semibold">Treinos ultrapassados e genéricos</span>
+              </div>
+            </div>
+            
+            <ul class="space-y-4 text-sm text-slate-300">
+              <li class="flex items-start gap-3">
+                <span class="text-teamRed font-black text-base">✕</span>
+                <span>Treinos padrão em PDF que o estagiário só copia e cola para todo mundo.</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <span class="text-teamRed font-black text-base">✕</span>
+                <span>Dietas restritivas e caras com alimentos que você odeia comer.</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <span class="text-teamRed font-black text-base">✕</span>
+                <span>Suporte lento que demora 3 a 5 dias para responder uma simples dúvida.</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <span class="text-teamRed font-black text-base">✕</span>
+                <span>Sem correção de exercícios: você treina errado e corre risco de lesão.</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <span class="text-teamRed font-black text-base">✕</span>
+                <span>Você faz esforço mas não enxerga mudanças reais no espelho.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- CARD TEAMJACK (EM DESTAQUE 3D) -->
+        <div class="glass-panel p-8 rounded-3xl border-2 border-teamNeon shadow-glow-neon tilt-card relative overflow-hidden" data-reveal="up">
+          <div class="tilt-card-badge absolute top-4 right-4 bg-gradient-to-r from-teamPurple to-purple-600 text-white font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-wider shadow-lg">
+            PADRÃO OURO DE QUALIDADE
+          </div>
+          
+          <div class="tilt-card-content space-y-6">
+            <div class="flex items-center gap-3 text-teamNeon">
+              <div class="w-12 h-12 rounded-xl bg-teamPurple/20 border border-teamNeon/40 flex items-center justify-center shadow-glow-purple">
+                <i data-lucide="check-circle-2" class="w-7 h-7 text-teamNeon"></i>
+              </div>
+              <div>
+                <h3 class="text-xl font-black text-white">TEAMJACK Consultoria</h3>
+                <span class="text-xs text-teamNeon font-semibold">Acompanhamento de alta performance</span>
+              </div>
+            </div>
+
+            <ul class="space-y-4 text-sm text-slate-200">
+              <li class="flex items-start gap-3">
+                <span class="text-teamNeon font-black text-base">✓</span>
+                <span><strong>Treino 100% individualizado:</strong> Montado especificamente para sua biomecânica e metas.</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <span class="text-teamNeon font-black text-base">✓</span>
+                <span><strong>Plano alimentar flexível:</strong> Coma o que gosta dentro do seu orçamento.</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <span class="text-teamNeon font-black text-base">✓</span>
+                <span><strong>Suporte VIP diário no WhatsApp:</strong> Dúvidas respondidas de segunda a segunda.</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <span class="text-teamNeon font-black text-base">✓</span>
+                <span><strong>Análise de vídeo e postura:</strong> Envie seus vídeos de treino para correção do treinador.</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <span class="text-teamNeon font-black text-base">✓</span>
+                <span><strong>Comunidade Exclusiva:</strong> Grupo motivacional para manter seu foco no nível máximo.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==========================================
+       5. O QUE VOCÊ RECEBE (ENTREGÁVEIS)
+  =========================================== -->
+  <section id="entregaveis" class="py-20 relative z-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-2xl mx-auto mb-16" data-reveal="up">
+        <span class="text-teamPurple text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full bg-purple-950/60 border border-purple-500/40">TUDO INCLUSO</span>
+        <h2 class="text-3xl sm:text-5xl font-black text-white mt-3">O Pacote Completo da sua Evolução</h2>
+        <p class="text-slate-300 mt-2 text-sm">Tudo o que você precisa para transformar seu físico em um só lugar.</p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+        <div class="glass-panel p-7 rounded-2xl border border-teamBorder hover:border-teamNeon transition-all tilt-card group" data-reveal="up">
+          <div class="tilt-card-content">
+            <div class="w-12 h-12 rounded-xl bg-purple-900/50 border border-teamPurple/40 text-teamNeon flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+              <i data-lucide="dumbbell" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Treino Individualizado</h3>
+            <p class="text-slate-400 text-xs sm:text-sm leading-relaxed">Periodização técnica completa ajustada para academia ou treino em casa com divisão perfeita de cargas e séries.</p>
+          </div>
+        </div>
+
+        <div class="glass-panel p-7 rounded-2xl border border-teamBorder hover:border-teamNeon transition-all tilt-card group" data-reveal="up">
+          <div class="tilt-card-content">
+            <div class="w-12 h-12 rounded-xl bg-purple-900/50 border border-teamPurple/40 text-teamNeon flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+              <i data-lucide="utensils" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Dieta Flexível & Personalizada</h3>
+            <p class="text-slate-400 text-xs sm:text-sm leading-relaxed">Calculada com base na sua rotina e preferências alimentares, incluindo lista completa de substituição rápida.</p>
+          </div>
+        </div>
+
+        <div class="glass-panel p-7 rounded-2xl border border-teamBorder hover:border-teamNeon transition-all tilt-card group" data-reveal="up">
+          <div class="tilt-card-content">
+            <div class="w-12 h-12 rounded-xl bg-purple-900/50 border border-teamPurple/40 text-teamNeon flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+              <i data-lucide="message-square-text" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Suporte Direto no WhatsApp</h3>
+            <p class="text-slate-400 text-xs sm:text-sm leading-relaxed">Acompanhamento diário e individualizado para tirar todas as dúvidas na hora do treino ou alimentação.</p>
+          </div>
+        </div>
+
+        <div class="glass-panel p-7 rounded-2xl border border-teamBorder hover:border-teamNeon transition-all tilt-card group" data-reveal="up">
+          <div class="tilt-card-content">
+            <div class="w-12 h-12 rounded-xl bg-purple-900/50 border border-teamPurple/40 text-teamNeon flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+              <i data-lucide="video" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Análise de Execuções</h3>
+            <p class="text-slate-400 text-xs sm:text-sm leading-relaxed">Envie vídeos dos seus exercícios para avaliação e correção imediata dos seus movimentos e postura.</p>
+          </div>
+        </div>
+
+        <div class="glass-panel p-7 rounded-2xl border border-teamBorder hover:border-teamNeon transition-all tilt-card group" data-reveal="up">
+          <div class="tilt-card-content">
+            <div class="w-12 h-12 rounded-xl bg-purple-900/50 border border-teamPurple/40 text-teamNeon flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+              <i data-lucide="activity" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Avaliação Postural & Mobilidade</h3>
+            <p class="text-slate-400 text-xs sm:text-sm leading-relaxed">Prescrição de exercícios de mobilidade e alongamentos específicos para prevenção de dores e lesões.</p>
+          </div>
+        </div>
+
+        <div class="glass-panel p-7 rounded-2xl border border-teamBorder hover:border-teamNeon transition-all tilt-card group" data-reveal="up">
+          <div class="tilt-card-content">
+            <div class="w-12 h-12 rounded-xl bg-purple-900/50 border border-teamPurple/40 text-teamNeon flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+              <i data-lucide="users" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Comunidade Exclusiva</h3>
+            <p class="text-slate-400 text-xs sm:text-sm leading-relaxed">Faça parte de um grupo ativo de alunos focado no mesmo objetivo para acelerar seus resultados.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================
+       6. CARROSSEL TOUCH DE EVOLUÇÃO (ANTES E DEPOIS)
+  =========================================== -->
+  <section id="resultados" class="py-20 relative z-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-2xl mx-auto mb-16" data-reveal="up">
+        <span class="text-teamNeon text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full bg-purple-950/60 border border-purple-500/40">PROVA SOCIAL REAL</span>
+        <h2 class="text-3xl sm:text-5xl font-black text-white mt-3">Resultados dos Nossos Alunos</h2>
+        <p class="text-slate-300 mt-2 text-sm">Deslize para ver as fotos de quem acreditou no método TEAMJACK.</p>
+      </div>
+
+      <!-- Container do Carrossel Touch-Friendly -->
+      <div class="max-w-4xl mx-auto mb-8 relative" data-reveal="up">
+        <div class="results-carousel relative overflow-hidden rounded-3xl border border-teamNeon/60 glass-panel shadow-card-3d">
+          <div class="results-track relative">
+            
+            <figure class="results-slide is-active" aria-hidden="false">
+              <div class="aspect-[4/3] sm:aspect-[16/9] w-full bg-teamBg/90 overflow-hidden relative flex items-center justify-center">
+                <img src="foto1.jpg" alt="Resultado Aluno - Antes e Depois" class="w-full h-full object-contain" onerror="this.src='https://placehold.co/1000x562/130c24/8b5cf6?text=EVOLUCAO+ALUNO+1'">
+                <div class="absolute bottom-4 left-4 bg-purple-950/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-purple-500/40 text-xs font-bold text-white">
+                  Evolução Real de Aluno TEAMJACK
+                </div>
+              </div>
+            </figure>
+
+            <figure class="results-slide" aria-hidden="true">
+              <div class="aspect-[4/3] sm:aspect-[16/9] w-full bg-teamBg/90 overflow-hidden relative flex items-center justify-center">
+                <img src="foto2.jpg" alt="Resultado Aluna - Antes e Depois" class="w-full h-full object-contain" onerror="this.src='https://placehold.co/1000x562/130c24/8b5cf6?text=EVOLUCAO+ALUNO+2'">
+                <div class="absolute bottom-4 left-4 bg-purple-950/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-purple-500/40 text-xs font-bold text-white">
+                  Evolução Real de Aluno TEAMJACK
+                </div>
+              </div>
+            </figure>
+
+          </div>
+        </div>
+
+        <!-- Botões de Navegação -->
+        <button type="button" id="results-prev" aria-label="Foto anterior" class="results-arrow left-2 sm:left-4">&#10094;</button>
+        <button type="button" id="results-next" aria-label="Próxima foto" class="results-arrow right-2 sm:right-4">&#10095;</button>
+      </div>
+
+      <!-- Indicadores de Slide -->
+      <div class="flex items-center justify-center gap-3 mb-16">
+        <button type="button" class="results-dot is-active" data-slide="0" aria-label="Ver foto 1"></button>
+        <button type="button" class="results-dot" data-slide="1" aria-label="Ver foto 2"></button>
+      </div>
+
+      <!-- Depoimentos em Texto -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="glass-panel p-6 rounded-2xl border border-teamBorder text-slate-300 text-xs sm:text-sm italic hover:border-teamNeon transition-colors tilt-card" data-reveal="up">
+          <div class="tilt-card-content">
+            <div class="text-yellow-400 mb-3 flex gap-1">★★★★★</div>
+            "Treinava há 3 anos e não via mudança no shape. Em apenas 2 meses no TEAMJACK aumentei minhas cargas e tive a maior evolução da minha vida."
+            <div class="mt-4 font-bold not-italic text-white text-xs">— Tomás (Aluno TEAMJACK)</div>
+          </div>
+        </div>
+
+        <div class="glass-panel p-6 rounded-2xl border border-teamBorder text-slate-300 text-xs sm:text-sm italic hover:border-teamNeon transition-colors tilt-card" data-reveal="up">
+          <div class="tilt-card-content">
+            <div class="text-yellow-400 mb-3 flex gap-1">★★★★★</div>
+            "Tinha medo de consultoria online por achar que era tudo cópia de treino, mas o suporte responde rápido no Whats e corrigiram minha postura!"
+            <div class="mt-4 font-bold not-italic text-white text-xs">— Bruno Playba</div>
+          </div>
+        </div>
+
+        <div class="glass-panel p-6 rounded-2xl border border-teamBorder text-slate-300 text-xs sm:text-sm italic hover:border-teamNeon transition-colors tilt-card" data-reveal="up">
+          <div class="tilt-card-content">
+            <div class="text-yellow-400 mb-3 flex gap-1">★★★★★</div>
+            "Achei que mulher não conseguia evoluir seco sem passar fome. O TeamJack me provou o contrário com uma dieta incrível e flexível."
+            <div class="mt-4 font-bold not-italic text-white text-xs">— Sophia</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==========================================
+       7. TABELA DE PLANOS & PREÇOS 3D
+  =========================================== -->
+  <section id="planos" class="py-20 relative z-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-2xl mx-auto mb-16" data-reveal="up">
+        <span class="text-teamNeon text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full bg-purple-950/60 border border-purple-500/40">INVISTA NO SEU CORPO</span>
+        <h2 class="text-3xl sm:text-5xl font-black text-white mt-3">Escolha o Plano Ideal para Você</h2>
+        <p class="text-slate-300 mt-2 text-sm">O seu corpo, sua saúde e sua autoestima merecem este investimento.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+        
+        <!-- Plano Mensal -->
+        <div class="glass-panel p-8 rounded-3xl border border-teamBorder flex flex-col justify-between tilt-card" data-reveal="up">
+          <div class="tilt-card-content space-y-6">
+            <span class="text-xs font-extrabold text-slate-400 uppercase tracking-widest block">PLANO MENSAL</span>
+            <div>
+              <span class="text-4xl sm:text-5xl font-black text-white">R$ 287</span>
+              <span class="text-slate-400 text-xs block mt-1">/ pagamento único mensal</span>
+            </div>
+            <ul class="space-y-3 text-xs sm:text-sm text-slate-300 pt-2 border-t border-purple-900/40">
+              <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-teamNeon"></i> Combo Dieta + Treino Individual</li>
+              <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-teamNeon"></i> Suporte Diário no WhatsApp</li>
+              <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-teamNeon"></i> Análise de Execução em Vídeo</li>
+              <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-teamNeon"></i> Ajustes de Cargas & Séries</li>
+            </ul>
+          </div>
+          <a href="https://wa.me/554888132994?text=Olá!%20Quero%20adquirir%20o%20Plano%20Mensal%20da%20Consultoria%20TEAMJACK." target="_blank" class="mt-8 w-full py-4 rounded-xl border border-teamBorder text-center font-bold text-sm text-white hover:bg-teamPurple/30 transition-all min-h-[48px] flex items-center justify-center">
+            Adquirir Plano Mensal
+          </a>
+        </div>
+
+        <!-- Plano Anual (Em Destaque 3D) -->
+        <div class="glass-panel p-8 rounded-3xl border-2 border-teamNeon shadow-glow-neon flex flex-col justify-between relative tilt-card" data-reveal="up">
+          <div class="tilt-card-badge absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-teamPurple via-purple-600 to-indigo-600 text-white font-black text-xs px-5 py-1.5 rounded-full uppercase tracking-wider shadow-lg flex items-center gap-1.5">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+            <span>MAIS RECOMENDADO</span>
+          </div>
+          
+          <div class="tilt-card-content space-y-6 pt-2">
+            <span class="text-xs font-black text-teamNeon uppercase tracking-widest block">PLANO ANUAL VIP</span>
+            <div>
+              <span class="text-slate-400 text-xs block font-semibold">12x de</span>
+              <div class="text-4xl sm:text-5xl font-black text-white">R$ 227</div>
+              <span class="text-teamNeon text-xs font-bold block mt-1">Economia máxima garantida</span>
+            </div>
+            <ul class="space-y-3 text-xs sm:text-sm text-slate-200 pt-2 border-t border-purple-900/40">
+              <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-teamNeon"></i> <strong>Tudo do Plano Mensal</strong></li>
+              <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-teamNeon"></i> Comunidade Exclusiva VIP</li>
+              <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-teamNeon"></i> Avaliação Postural Completa</li>
+              <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-teamNeon"></i> Prioridade no Suporte Whats</li>
+              <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-teamNeon"></i> Maior Taxa de Transformação</li>
+            </ul>
+          </div>
+          
+          <a href="https://wa.me/554888132994?text=Olá!%20Quero%20aproveitar%20a%20vaga%20no%20Plano%20Anual%20VIP%20da%20Consultoria." target="_blank" class="mt-8 w-full py-4 rounded-xl bg-gradient-to-r from-teamPurple via-purple-600 to-indigo-600 text-white font-black text-center text-sm hover:shadow-glow-neon transition-all cta-motion min-h-[48px] flex items-center justify-center gap-2">
+            <span>GARANTIR PLANO ANUAL</span>
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </a>
+        </div>
+
+        <!-- Plano Trimestral -->
+        <div class="glass-panel p-8 rounded-3xl border border-teamBorder flex flex-col justify-between tilt-card" data-reveal="up">
+          <div class="tilt-card-content space-y-6">
+            <span class="text-xs font-extrabold text-slate-400 uppercase tracking-widest block">PLANO TRIMESTRAL</span>
+            <div>
+              <span class="text-slate-400 text-xs block font-semibold">3x de</span>
+              <div class="text-4xl sm:text-5xl font-black text-white">R$ 263</div>
+              <span class="text-slate-400 text-xs block mt-1">/ mês no combo trimestral</span>
+            </div>
+            <ul class="space-y-3 text-xs sm:text-sm text-slate-300 pt-2 border-t border-purple-900/40">
+              <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-teamNeon"></i> Combo Dieta + Treino</li>
+              <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-teamNeon"></i> Suporte no WhatsApp</li>
+              <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-teamNeon"></i> Ajustes de Cargas & Volume</li>
+              <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-teamNeon"></i> Acompanhamento Intermediário</li>
+            </ul>
+          </div>
+          <a href="https://wa.me/554888132994?text=Olá!%20Quero%20adquirir%20o%20Plano%20Trimestral%20da%20Consultoria%20TEAMJACK." target="_blank" class="mt-8 w-full py-4 rounded-xl border border-teamBorder text-center font-bold text-sm text-white hover:bg-teamPurple/30 transition-all min-h-[48px] flex items-center justify-center">
+            Adquirir Plano Trimestral
+          </a>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==========================================
+       8. SEÇÃO DE GARANTIA INCONDICIONAL 7 DIAS (BADGE 3D)
+  =========================================== -->
+  <section class="py-16 relative z-20">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      <div class="glass-panel p-8 sm:p-10 rounded-3xl border border-teamNeon shadow-glow-neon flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
+        
+        <!-- Badge 3D Rotação -->
+        <div class="w-28 h-28 shrink-0 rounded-full bg-gradient-to-br from-purple-600 via-teamNeon to-indigo-600 p-1 shadow-glow-neon flex items-center justify-center animate-pulse">
+          <div class="w-full h-full rounded-full bg-teamBg flex flex-col items-center justify-center text-center p-2 border border-purple-400">
+            <i data-lucide="shield-check" class="w-8 h-8 text-teamNeon mb-1"></i>
+            <span class="text-[10px] font-black text-white tracking-widest uppercase">7 DIAS</span>
+            <span class="text-[8px] text-purple-300 font-bold">GARANTIA</span>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <h3 class="text-xl sm:text-2xl font-black text-white">Risco Zero: Teste por 7 Dias Garantidos</h3>
+          <p class="text-slate-300 text-xs sm:text-sm leading-relaxed">
+            Se nos primeiros 7 dias após receber seu protocolo de treino e dieta você achar que a consultoria não é para você, basta me mandar uma mensagem no WhatsApp. Devolveremos 100% do seu dinheiro sem letras miúdas.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================
+       9. DÚVIDAS FREQUENTES (FAQ)
+  =========================================== -->
+  <section id="faq" class="py-20 relative z-20">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center mb-16" data-reveal="up">
+        <span class="text-teamNeon text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full bg-purple-950/60 border border-purple-500/40">TIRA-DÚVIDAS</span>
+        <h2 class="text-3xl sm:text-4xl font-black text-white mt-3">Perguntas Frequentes</h2>
+      </div>
+
+      <div class="space-y-4" data-reveal="up">
+        <details class="glass-panel p-5 rounded-2xl border border-teamBorder group cursor-pointer transition-all">
+          <summary class="font-bold text-white flex justify-between items-center text-sm sm:text-base">
+            Sou iniciante e nunca treinei, a consultoria serve para mim?
+            <span class="text-teamNeon group-open:rotate-180 transition-transform font-bold text-lg">▼</span>
+          </summary>
+          <p class="text-slate-300 text-xs sm:text-sm mt-3 leading-relaxed">Com certeza! Você terá acesso a vídeos demonstrativos de todos os exercícios do seu treino e poderá enviar vídeos da sua execução no WhatsApp para corrigirmos na hora.</p>
+        </details>
+
+        <details class="glass-panel p-5 rounded-2xl border border-teamBorder group cursor-pointer transition-all">
+          <summary class="font-bold text-white flex justify-between items-center text-sm sm:text-base">
+            A consultoria também serve para mulheres?
+            <span class="text-teamNeon group-open:rotate-180 transition-transform font-bold text-lg">▼</span>
+          </summary>
+          <p class="text-slate-300 text-xs sm:text-sm mt-3 leading-relaxed">Sim! Atendemos centenas de mulheres com focos específicos (como hipertrofia de glúteos e coxas, definição abdominal e emagrecimento sem perda de massa magra).</p>
+        </details>
+
+        <details class="glass-panel p-5 rounded-2xl border border-teamBorder group cursor-pointer transition-all">
+          <summary class="font-bold text-white flex justify-between items-center text-sm sm:text-base">
+            Em quanto tempo recebo meu plano de treino e dieta?
+            <span class="text-teamNeon group-open:rotate-180 transition-transform font-bold text-lg">▼</span>
+          </summary>
+          <p class="text-slate-300 text-xs sm:text-sm mt-3 leading-relaxed">Após a confirmação do pagamento e o preenchimento da sua anamnese detalhada, seu protocolo 100% individualizado é entregue em até 48 horas úteis.</p>
+        </details>
+
+        <details class="glass-panel p-5 rounded-2xl border border-teamBorder group cursor-pointer transition-all">
+          <summary class="font-bold text-white flex justify-between items-center text-sm sm:text-base">
+            Posso trocar alimentos que eu não gosto na dieta?
+            <span class="text-teamNeon group-open:rotate-180 transition-transform font-bold text-lg">▼</span>
+          </summary>
+          <p class="text-slate-300 text-xs sm:text-sm mt-3 leading-relaxed">Sim, todas as dietas possuem tabela flexível de substituição rápida para você comer o que gosta sem furar o plano e sem gastos extras.</p>
+        </details>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==========================================
+       10. RODAPÉ
+  =========================================== -->
+  <footer class="glass-panel border-t border-teamBorder pt-16 pb-28 sm:pb-16 relative z-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
+      
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-teamCard border border-teamBorder overflow-hidden flex items-center justify-center shadow-glow-neon">
+          <img src="logo.png" alt="Logo TeamJack" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/100x100/8b5cf6/ffffff?text=JACK'">
+        </div>
+        <div>
+          <span class="text-xl font-black text-white">TEAM<span class="text-teamNeon">JACK</span></span>
+          <p class="text-slate-400 text-xs mt-1">Consultoria de Treino & Nutrição — Coach Jackson Freitas.<br>Contato: (48) 8813-2994</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <a href="https://wa.me/554888132994" target="_blank" class="w-12 h-12 rounded-2xl glass-panel flex items-center justify-center text-slate-300 hover:text-teamNeon hover:border-teamNeon transition-colors">
+          <i data-lucide="message-square" class="w-6 h-6"></i>
+        </a>
+      </div>
+
+    </div>
+    
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-slate-500 mt-8 pt-8 border-t border-purple-900/40">
+      © 2026 TEAMJACK. Todos os direitos reservados. Treinador Jackson Freitas.
+    </div>
+  </footer>
+
+  <!-- ==========================================
+       BARRA FIXA DE CONVERSÃO MOBILE (STICKY CTA BAR)
+  =========================================== -->
+  <div class="md:hidden fixed bottom-0 left-0 w-full z-50 p-3 glass-panel border-t border-teamNeon shadow-2xl">
+    <div class="flex items-center justify-between gap-3 max-w-md mx-auto">
+      <div>
+        <span class="text-[10px] text-purple-300 font-bold block uppercase tracking-wider">Vagas Limitadas</span>
+        <span class="text-xs font-black text-white">Consultoria TEAMJACK</span>
+      </div>
+      <a href="https://wa.me/554888132994?text=Olá!%20Vim%20pelo%20site%20e%20quero%20garantir%20minha%20vaga%20com%20o%20Jackson." target="_blank" class="px-5 py-3 rounded-xl bg-gradient-to-r from-teamPurple to-purple-600 text-white font-black text-xs shadow-glow-neon flex items-center gap-2 cta-motion min-h-[44px]">
+        <span>GARANTIR VAGA</span>
+        <i data-lucide="zap" class="w-4 h-4 fill-white"></i>
+      </a>
+    </div>
+  </div>
+
+  <!-- BOTÃO FLUTUANTE DO WHATSAPP COM PULSO 3D -->
+  <a href="https://wa.me/554888132994?text=Olá!%20Gostaria%20de%20saber%20mais%20informações%20sobre%20a%20consultoria%20do%20TEAMJACK." target="_blank" aria-label="Falar no WhatsApp" class="fixed bottom-20 sm:bottom-8 right-6 w-16 h-16 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-2xl z-50 hover:scale-110 transition-transform whatsapp-3d-pulse">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M18.403 5.592A8.942 8.942 0 0012.006 3c-4.948 0-8.976 4.027-8.978 8.977 0 1.582.413 3.126 1.198 4.488L3 21l4.646-1.218a8.94 8.94 0 004.359 1.135h.004c4.947 0 8.975-4.027 8.977-8.977 0-2.398-.933-4.653-2.583-6.348zM12.006 19.4a7.447 7.447 0 01-3.794-1.041l-.272-.162-2.812.737.75-2.743-.178-.283a7.44 7.44 0 01-1.142-3.93c.002-4.12 3.352-7.47 7.472-7.47 1.996 0 3.872.778 5.283 2.19 1.411 1.412 2.187 3.289 2.186 5.286-.002 4.122-3.353 7.472-7.473 7.472zm4.098-5.592c-.225-.113-1.332-.657-1.538-.732-.206-.075-.356-.113-.506.113-.15.225-.58.732-.711.882-.131.15-.262.169-.487.056-.225-.113-.949-.35-1.808-1.116-.668-.596-1.12-1.33-1.251-1.555-.131-.225-.014-.347.098-.459.102-.101.225-.262.338-.393.113-.131.15-.262.225-.375.075-.15.038-.281-.019-.394-.056-.113-.506-1.219-.693-1.669-.183-.438-.369-.379-.506-.386h-.431c-.15 0-.394.056-.6.281-.206.225-.788.769-.788 1.875 0 1.106.806 2.175.918 2.325.113.15 1.587 2.424 3.845 3.4 1.88.813 2.261.651 2.673.612.412-.038 1.332-.544 1.519-1.069.187-.525.187-.975.131-1.069-.056-.094-.206-.15-.431-.263z"/>
+    </svg>
+  </a>
+
+  <!-- ==========================================
+       SCRIPTS INTERATIVOS & CENA THREE.JS
+  =========================================== -->
+  <script>
+    // Inicializar Ícones Lucide
+    lucide.createIcons();
+
+    // -------------------------------------------------------------
+    // 1. CENA 3D INTERATIVA (THREE.JS) COM PARTICULAS & ANILHAS
+    // -------------------------------------------------------------
+    window.addEventListener('load', () => {
+      const canvas = document.getElementById('canvas-3d');
+      if (!canvas) return;
+
+      const scene = new Three.Scene();
+      const camera = new Three.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.z = 30;
+
+      const renderer = new Three.WebGLRenderer({ canvas, alpha: true, antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+      // Iluminação 3D Neon
+      const ambientLight = new Three.AmbientLight(0x3b0764, 1.5);
+      scene.add(ambientLight);
+
+      const pointLight1 = new Three.PointLight(0x8b5cf6, 3, 100);
+      pointLight1.position.set(20, 20, 20);
+      scene.add(pointLight1);
+
+      const pointLight2 = new Three.PointLight(0xa855f7, 2, 100);
+      pointLight2.position.set(-20, -20, 10);
+      scene.add(pointLight2);
+
+      // Partículas em 3D
+      const particlesCount = window.innerWidth < 768 ? 200 : 500;
+      const particlesGeometry = new Three.BufferGeometry();
+      const posArray = new Float32Array(particlesCount * 3);
+
+      for(let i=0; i<particlesCount*3; i++) {
+        posArray[i] = (Math.random() - 0.5) * 80;
+      }
+      particlesGeometry.setAttribute('position', new Three.BufferAttribute(posArray, 3));
+
+      const particlesMaterial = new Three.PointsMaterial({
+        size: 0.25,
+        color: 0xa855f7,
+        transparent: true,
+        opacity: 0.6
+      });
+      const particlesMesh = new Three.Points(particlesGeometry, particlesMaterial);
+      scene.add(particlesMesh);
+
+      // Objetos 3D Estilo Anilhas / Halteres Flutuantes
+      const meshes = [];
+      const torusGeo = new Three.TorusGeometry(3, 0.8, 16, 32);
+      const torusMat = new Three.MeshStandardMaterial({
+        color: 0x1d1336,
+        roughness: 0.2,
+        metalness: 0.8,
+        emissive: 0x4c1d95,
+        wireframe: true
+      });
+
+      for(let i = 0; i < 5; i++) {
+        const mesh = new Three.Mesh(torusGeo, torusMat);
+        mesh.position.x = (Math.random() - 0.5) * 60;
+        mesh.position.y = (Math.random() - 0.5) * 60;
+        mesh.position.z = (Math.random() - 0.5) * 40 - 10;
+        mesh.rotation.x = Math.random() * Math.PI;
+        mesh.rotation.y = Math.random() * Math.PI;
+        scene.add(mesh);
+        meshes.push(mesh);
+      }
+
+      // Parallax Mouse & Touch
+      let mouseX = 0;
+      let mouseY = 0;
+      let targetX = 0;
+      let targetY = 0;
+
+      const handleMove = (x, y) => {
+        mouseX = (x - window.innerWidth / 2) * 0.0005;
+        mouseY = (y - window.innerHeight / 2) * 0.0005;
+      };
+
+      window.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY));
+      window.addEventListener('touchmove', (e) => {
+        if(e.touches.length > 0) handleMove(e.touches[0].clientX, e.touches[0].clientY);
+      }, { passive: true });
+
+      // Loop de Animação Render
+      function animate() {
+        requestAnimationFrame(animate);
+
+        targetX += (mouseX - targetX) * 0.05;
+        targetY += (mouseY - targetY) * 0.05;
+
+        particlesMesh.rotation.y += 0.001;
+        particlesMesh.rotation.x += 0.0005;
+
+        meshes.forEach((m, idx) => {
+          m.rotation.x += 0.005 * (idx + 1);
+          m.rotation.y += 0.003 * (idx + 1);
+        });
+
+        camera.position.x += (targetX * 20 - camera.position.x) * 0.05;
+        camera.position.y += (-targetY * 20 - camera.position.y) * 0.05;
+        camera.lookAt(scene.position);
+
+        renderer.render(scene, camera);
+      }
+      animate();
+
+      // Responsividade do Canvas
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+    });
+
+    // -------------------------------------------------------------
+    // 2. EFEITO DE TILT 3D NOS CARDS VIA CSS/JS
+    // -------------------------------------------------------------
+    const tiltCards = document.querySelectorAll('.tilt-card');
+    tiltCards.forEach(card => {
+      card.addEventListener('mousemove', (e) => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        const rotateX = ((y - centerY) / centerY) * -10;
+        const rotateY = ((x - centerX) / centerX) * 10;
+        card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+      });
+
+      card.addEventListener('mouseleave', () => {
+        card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+      });
+    });
+
+    // -------------------------------------------------------------
+    // 3. MENU MOBILE TOGGLE
+    // -------------------------------------------------------------
+    const mobileBtn = document.getElementById('mobile-menu-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const mobileLinks = document.querySelectorAll('.mobile-link');
+
+    mobileBtn?.addEventListener('click', () => {
+      mobileMenu.classList.toggle('hidden');
+    });
+    mobileLinks.forEach(link => {
+      link.addEventListener('click', () => mobileMenu.classList.add('hidden'));
+    });
+
+    // -------------------------------------------------------------
+    // 4. CALCULADORA INTERATIVA DE METAS
+    // -------------------------------------------------------------
+    (() => {
+      let currentGoal = 'hipertrofia';
+      let currentDays = 4;
+
+      const goalBtns = document.querySelectorAll('#calc-goal-options .calc-btn');
+      const daysSlider = document.getElementById('days-range');
+      const daysLabel = document.getElementById('days-count-label');
+      const resultText = document.getElementById('calc-result-text');
+      const resultSub = document.getElementById('calc-result-sub');
+      const whatsappBtn = document.getElementById('calc-whatsapp-btn');
+
+      const updateCalculation = () => {
+        daysLabel.textContent = `${currentDays} dias/semana`;
+        let text = '';
+        let subText = '';
+        let goalMsg = '';
+
+        if (currentGoal === 'hipertrofia') {
+          goalMsg = 'Ganhar Massa Muscular';
+          text = `Evolução de carga e volume em <span class="text-teamNeon">3 a 4 semanas</span>!`;
+          subText = `Com ${currentDays} dias por semana, ajustaremos a taxa calórica ideal e volume de treino para você hipertrofiar sem acúmulo de gordura.`;
+        } else if (currentGoal === 'emagrecimento') {
+          goalMsg = 'Perder Gordura (Secar)';
+          text = `Primeiros quilos perdidos em <span class="text-teamNeon">15 a 20 dias</span>!`;
+          subText = `Treinando ${currentDays}x na semana com déficit calórico calculado sem passar fome, você vai acelerar a queima de gordura preservando seus músculos.`;
+        } else {
+          goalMsg = 'Definição Muscular';
+          text = `Vascularição e definição em <span class="text-teamNeon">2 a 3 semanas</span>!`;
+          subText = `Com ${currentDays} dias de estímulo direcionado, refinaremos seu plano alimentar flexível para trincar o abdômen.`;
+        }
+
+        resultText.innerHTML = text;
+        resultSub.textContent = subText;
+
+        const encodedMessage = encodeURIComponent(`Olá Coach Jackson Freitas! Simulei meu perfil no site: Tenho como objetivo "${goalMsg}" treinando ${currentDays} dias por semana. Como funciona para começarmos minha consultoria?`);
+        whatsappBtn.href = `https://wa.me/554888132994?text=${encodedMessage}`;
+      };
+
+      goalBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          goalBtns.forEach(b => {
+            b.classList.remove('active', 'border-teamNeon', 'bg-teamPurple/40', 'text-white');
+            b.classList.add('border-teamBorder', 'text-slate-300');
+          });
+          btn.classList.add('active', 'border-teamNeon', 'bg-teamPurple/40', 'text-white');
+          currentGoal = btn.dataset.value;
+          updateCalculation();
+        });
+      });
+
+      daysSlider?.addEventListener('input', (e) => {
+        currentDays = e.target.value;
+        updateCalculation();
+      });
+
+      updateCalculation();
+    })();
+
+    // -------------------------------------------------------------
+    // 5. CARROSSEL TOUCH DE ANTES E DEPOIS
+    // -------------------------------------------------------------
+    (() => {
+      const slides = Array.from(document.querySelectorAll('.results-slide'));
+      const dots = Array.from(document.querySelectorAll('.results-dot'));
+      const prev = document.getElementById('results-prev');
+      const next = document.getElementById('results-next');
+      if (!slides.length || !prev || !next) return;
+      let current = 0;
+      let autoPlay;
+
+      const showSlide = (index) => {
+        current = (index + slides.length) % slides.length;
+        slides.forEach((slide, i) => {
+          slide.classList.toggle('is-active', i === current);
+          slide.setAttribute('aria-hidden', i === current ? 'false' : 'true');
+        });
+        dots.forEach((dot, i) => {
+          dot.classList.toggle('is-active', i === current);
+        });
+      };
+
+      prev.addEventListener('click', () => showSlide(current - 1));
+      next.addEventListener('click', () => showSlide(current + 1));
+      dots.forEach(dot => dot.addEventListener('click', () => showSlide(Number(dot.dataset.slide))));
+
+      const carousel = document.querySelector('.results-carousel');
+      let touchStartX = 0;
+      carousel?.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].clientX; }, { passive: true });
+      carousel?.addEventListener('touchend', e => {
+        const delta = e.changedTouches[0].clientX - touchStartX;
+        if (Math.abs(delta) > 40) showSlide(current + (delta < 0 ? 1 : -1));
+      }, { passive: true });
+
+      const startAuto = () => { autoPlay = setInterval(() => showSlide(current + 1), 6000); };
+      carousel?.addEventListener('mouseenter', () => clearInterval(autoPlay));
+      carousel?.addEventListener('mouseleave', startAuto);
+      showSlide(0); 
+      startAuto();
+    })();
+
+    // -------------------------------------------------------------
+    // 6. SCROLL REVEAL ANIMATIONS
+    // -------------------------------------------------------------
+    (() => {
+      document.body.classList.add('motion-ready');
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+
+      document.querySelectorAll('[data-reveal]').forEach(el => observer.observe(el));
+    })();
+  </script>
+</body>
+</html>
